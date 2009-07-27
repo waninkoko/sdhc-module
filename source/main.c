@@ -24,36 +24,31 @@
 
 #include "ipc.h"
 #include "mem.h"
+#include "module.h"
 #include "sdio.h"
 #include "syscalls.h"
+#include "timer.h"
 #include "types.h"
 #include "wbfs.h"
 
-#define WBFS_BASE		(('W'<<24)|('F'<<16)|('S'<<8))
-
-/* IOCTL commands */
-#define IOCTL_SDHC_INIT		0x01
-#define IOCTL_SDHC_READ		0x02
-#define IOCTL_SDHC_WRITE	0x03
-#define IOCTL_SDHC_ISINSERTED	0x04
-#define IOCTL_WBFS_OPEN_DISC	(WBFS_BASE + 0x1)
-#define IOCTL_WBFS_READ_DISC	(WBFS_BASE + 0x2)
-
-/* Device name */
-#define DEVICE_NAME		"/dev/sdio/sdhc"
-
-/* Heap space */
-static u32 heapspace[0x800] ATTRIBUTE_ALIGN(32);
-
-
-s32 Ioctlv_Parse(ipcmessage *message)
+s32 __SDHC_Ioctlv(ipcmessage *message)
 {
 	ioctlv *vector = message->ioctlv.vector;
+	u32     len_in = message->ioctlv.num_in;
+	u32     len_io = message->ioctlv.num_io;
 
+	u32 cnt;
 	s32 ret = IPC_EINVAL;
 
-	/* Parse IOCTL command */
-	switch (message->ioctl.command) {
+	/* Invalidate cache */
+	os_sync_before_read(vector, sizeof(ioctlv) * (len_in + len_io));
+
+	for (cnt = 0; cnt < (len_in + len_io); cnt++)
+		os_sync_before_read(vector[cnt].data, vector[cnt].len);
+
+	/* Parse IOCTLV command */
+	switch (message->ioctlv.command) {
+	/** Initialize SDHC **/
 	case IOCTL_SDHC_INIT: {
 		/* Initialize SDIO */
 		ret = !sdio_Startup();
@@ -61,6 +56,7 @@ s32 Ioctlv_Parse(ipcmessage *message)
 		break;
 	}
 
+	/** Read sectors **/
 	case IOCTL_SDHC_READ: {
 		u32   sector     = *(u32 *)(vector[0].data);
 		u32   numSectors = *(u32 *)(vector[1].data);
@@ -72,6 +68,7 @@ s32 Ioctlv_Parse(ipcmessage *message)
 		break;
 	}
 
+	/** Write sectors **/
 	case IOCTL_SDHC_WRITE: {
 		u32   sector     = *(u32 *)(vector[0].data);
 		u32   numSectors = *(u32 *)(vector[1].data);
@@ -83,6 +80,7 @@ s32 Ioctlv_Parse(ipcmessage *message)
 		break;
 	}
 
+	/** Check for SD card **/
 	case IOCTL_SDHC_ISINSERTED: {
 		/* Check if SD card is inserted */
 		ret = !sdio_IsInserted();
@@ -90,6 +88,7 @@ s32 Ioctlv_Parse(ipcmessage *message)
 		break;
 	}
 
+	/** Open WBFS disc **/
 	case IOCTL_WBFS_OPEN_DISC: {
 		u8 *discid = (u8 *)(vector[0].data);
 
@@ -99,6 +98,7 @@ s32 Ioctlv_Parse(ipcmessage *message)
 		break;
 	}
 
+	/** Read WBFS disc **/
 	case IOCTL_WBFS_READ_DISC: {
 		u32   offset = *(u32 *)(vector[0].data);
 		u32   len    = *(u32 *)(vector[1].data);
@@ -116,32 +116,57 @@ s32 Ioctlv_Parse(ipcmessage *message)
 		break;
 	}
 
+	/* Flush cache */
+	for (cnt = 0; cnt < (len_in + len_io); cnt++)
+		os_sync_after_write(vector[cnt].data, vector[cnt].len);
+
 	return ret;
 }
 
+s32 __SDHC_Initialize(u32 *queuehandle)
+{
+	void *buffer = NULL;
+	s32   ret;
+
+	/* Initialize memory heap */
+	Mem_Init();
+
+	/* Initialize timer subsystem */
+	Timer_Init();
+
+	/* Allocate queue buffer */
+	buffer = Mem_Alloc(0x20);
+	if (!buffer)
+		return IPC_ENOMEM;
+
+	/* Create message queue */
+	ret = os_message_queue_create(buffer, 8);
+	if (ret < 0)
+		return ret;
+
+	/* Register devices */
+	os_device_register(DEVICE_NAME, ret);
+
+	/* Copy queue handler */
+	*queuehandle = ret;
+
+	return 0;
+}
+
+
 int main(void)
 {
-	void *queuespace = NULL;
-	u32   heaphandle, queuehandle;
+	u32 queuehandle;
+	s32 ret;
 
-	/* Create heap */
-	Mem_CreateHeap();
-
-	/* Create main heap */
-	heaphandle = os_heap_create(heapspace, sizeof(heapspace));
-
-	/* Create queue */
-	queuespace  = os_heap_alloc(heaphandle, 0x20);
-	queuehandle = os_message_queue_create(queuespace, 8);
-
-	/* Register device */
-	os_device_register(DEVICE_NAME, queuehandle);
+	/* Initialize module */
+	ret = __SDHC_Initialize(&queuehandle);
+	if (ret < 0)
+		return ret;
 
 	/* Main loop */
 	while (1) {
 		ipcmessage *message = NULL;
-
-		s32 ack = 1, ret = IPC_EINVAL;
 
 		/* Wait for message */
 		os_message_queue_receive(queuehandle, (void *)&message, 0);
@@ -166,15 +191,18 @@ int main(void)
 
 		case IOS_IOCTLV: {
 			/* Parse IOCTLV message */
-			ret = Ioctlv_Parse(message);
-		}
+			ret = __SDHC_Ioctlv(message);
 
-		default:
 			break;
 		}
 
-		if (ack)
-			os_message_queue_ack((void *)message, ret);
+		default:
+			/* Unknown command */
+			ret = IPC_EINVAL;
+		}
+
+		/* Acknowledge message */
+		os_message_queue_ack(message, ret);
 	}
    
 	return 0;

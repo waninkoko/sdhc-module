@@ -22,36 +22,33 @@
 
 #include "syscalls.h"
 
-/* Constants */
-#define HEAP_ADDRESS	((void *)0x139A0000)
-#define HEAP_SIZE	0x8000
+/* Heap */
+static u32 heapspace[0x2000] ATTRIBUTE_ALIGN(32);
 
 /* Variables */
-static s32 heap = -1;
+static s32 hid = -1;
 
 
-s32 Mem_CreateHeap(void)
+s32 Mem_Init(void)
 {
 	/* Heap already created */
-	if (heap > 0)
+	if (hid >= 0)
 		return 0;
 
 	/* Create heap */
-	heap = os_heap_create(HEAP_ADDRESS, HEAP_SIZE);
-	if (heap < 0)
-		return -1;
+	hid = os_heap_create(heapspace, sizeof(heapspace));
 
-	return 0;
+	return (hid >= 0) ? 0 : -1;
 } 
 
 void *Mem_Alloc(u32 size)
 {
 	/* Allocate memory */
-	return os_heap_alloc(heap, size);
+	return os_heap_alloc_aligned(hid, size, 32);
 }
 
 void Mem_Free(void *ptr)
 {
 	/* Free memory */
-	os_heap_free(heap, ptr);
+	os_heap_free(hid, ptr);
 }

@@ -4,7 +4,7 @@
 #include "types.h"
 
 /* Prototypes */
-s32   Mem_CreateHeap(void);
+s32   Mem_Init(void);
 void *Mem_Alloc(u32 size);
 void  Mem_Free(void *ptr);
 

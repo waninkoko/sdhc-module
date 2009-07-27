@@ -97,7 +97,7 @@ LIBPATHS :=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
 ARCH	=	-mcpu=arm9tdmi -mtune=arm9tdmi -mthumb -mthumb-interwork -mbig-endian
 
-CFLAGS	=	$(ARCH) $(INCLUDE) -fno-strict-aliasing -Wall -O3 -fomit-frame-pointer -ffast-math -fverbose-asm -Wpointer-arith -Winline -Wundef -g -ffunction-sections -fdata-sections -fno-exceptions 
+CFLAGS	=	$(ARCH) $(INCLUDE) -fno-strict-aliasing -Wall -Os -fomit-frame-pointer -ffast-math -fverbose-asm -Wpointer-arith -Winline -Wundef -ffunction-sections -fdata-sections -fno-exceptions 
 CFLAGS	+=	-Wstrict-prototypes
 
 
