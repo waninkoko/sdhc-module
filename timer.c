@@ -1,5 +1,5 @@
 /*   
-	Custom IOS Module (FAT)
+	Custom IOS Module (SDHC)
 
 	Copyright (C) 2008 neimod.
 	Copyright (C) 2009 WiiGator.

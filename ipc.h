@@ -3,12 +3,13 @@
 
 #include "types.h"
 
-/* Error codes */
-#define IPC_EINVAL		 -1
-#define IPC_ENOENT		 -6
+/* IPC error codes */
+#define IPC_ENOENT		-6
 #define IPC_ENOMEM		-22
-#define IPC_EIO			  2
-#define IPC_EINCMD		128
+#define IPC_EINVAL		-101
+#define IPC_EACCESS		-102
+#define IPC_EEXIST		-105
+#define IPC_NOENT		-106
 
 /* IOS calls */
 #define IOS_OPEN		0x01
@@ -71,5 +72,10 @@ typedef struct ipcmessage {
 		} ioctlv;
 	};
 } ATTRIBUTE_PACKED ipcmessage;
+
+
+/* Prototypes */
+void InvalidateVector(ioctlv *vector, u32 inlen, u32 iolen);
+void FlushVector(ioctlv *vector, u32 inlen, u32 iolen);
 
 #endif

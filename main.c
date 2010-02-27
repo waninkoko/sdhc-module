@@ -31,23 +31,16 @@
 #include "types.h"
 #include "wbfs.h"
 
-s32 __SDHC_Ioctlv(ipcmessage *message)
-{
-	ioctlv *vector = message->ioctlv.vector;
-	u32     len_in = message->ioctlv.num_in;
-	u32     len_io = message->ioctlv.num_io;
 
-	u32 cnt;
+s32 __SDHC_Ioctlv(u32 cmd, ioctlv *vector, u32 inlen, u32 iolen)
+{
 	s32 ret = IPC_EINVAL;
 
 	/* Invalidate cache */
-	os_sync_before_read(vector, sizeof(ioctlv) * (len_in + len_io));
-
-	for (cnt = 0; cnt < (len_in + len_io); cnt++)
-		os_sync_before_read(vector[cnt].data, vector[cnt].len);
+	InvalidateVector(vector, inlen, iolen);
 
 	/* Parse IOCTLV command */
-	switch (message->ioctlv.command) {
+	switch (cmd) {
 	/** Initialize SDHC **/
 	case IOCTL_SDHC_INIT: {
 		/* Initialize SDIO */
@@ -117,8 +110,7 @@ s32 __SDHC_Ioctlv(ipcmessage *message)
 	}
 
 	/* Flush cache */
-	for (cnt = 0; cnt < (len_in + len_io); cnt++)
-		os_sync_after_write(vector[cnt].data, vector[cnt].len);
+	FlushVector(vector, inlen, iolen);
 
 	return ret;
 }
@@ -159,6 +151,9 @@ int main(void)
 	u32 queuehandle;
 	s32 ret;
 
+	/* Print info */
+	write("$IOSVersion: SDHC: " __DATE__ " " __TIME__ " 64M$\n");
+
 	/* Initialize module */
 	ret = __SDHC_Initialize(&queuehandle);
 	if (ret < 0)
@@ -190,8 +185,13 @@ int main(void)
 		}
 
 		case IOS_IOCTLV: {
+			ioctlv *vector = message->ioctlv.vector;
+			u32     inlen  = message->ioctlv.num_in;
+			u32     iolen  = message->ioctlv.num_io;
+			u32     cmd    = message->ioctlv.command;
+
 			/* Parse IOCTLV message */
-			ret = __SDHC_Ioctlv(message);
+			ret = __SDHC_Ioctlv(cmd, vector, inlen, iolen);
 
 			break;
 		}

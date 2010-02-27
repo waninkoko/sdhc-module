@@ -1,8 +1,35 @@
+/*   
+	Custom IOS Module (SDHC)
+
+	Copyright (C) 2008 neimod.
+	Copyright (C) 2009 WiiGator.
+	Copyright (C) 2009 Waninkoko.
+
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program; if not, write to the Free Software
+	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+
 .macro syscall vec_sys
 	.long 0xE6000010 + (\vec_sys<<5)
 	bx lr
 .endm
 
+
+/*
+ * IOS syscalls
+ */
 	.code 32
 	.global os_thread_create
 os_thread_create:
@@ -219,16 +246,6 @@ os_message_queue_ack:
 	syscall 0x2a
 
 	.code 32
-	.global os_set_uid
-os_set_uid:
-	syscall 0x2b
-
-	.code 32
-	.global os_set_gid
-os_set_gid:
-	syscall 0x2d
-
-	.code 32
 	.global os_software_IRQ
 os_software_IRQ:
 	syscall 0x34
@@ -244,16 +261,6 @@ os_sync_after_write:
 	syscall 0x40
 
 	.code 32
-	.global os_ppc_boot
-os_ppc_boot:
-	syscall 0x41
-
-	.code 32
-	.global os_ios_boot
-os_ios_boot:
-	syscall 0x42
-
-	.code 32
 	.global os_virt_to_phys
 os_virt_to_phys:
 	syscall 0x4f
@@ -262,3 +269,16 @@ os_virt_to_phys:
 	.global os_syscall_50
 os_syscall_50:
 	syscall 0x50
+
+
+/*
+ * ARM syscalls
+ */
+	.code 32
+	.global write
+write:
+	mov	r2, lr
+	adds	r1, r0, #0
+	movs	r0, #4
+	svc	0xab
+	bx	r2
