@@ -127,12 +127,12 @@ s32 __SDHC_Initialize(u32 *queuehandle)
 	Timer_Init();
 
 	/* Allocate queue buffer */
-	buffer = Mem_Alloc(0x20);
+	buffer = Mem_Alloc(0x80);
 	if (!buffer)
 		return IPC_ENOMEM;
 
 	/* Create message queue */
-	ret = os_message_queue_create(buffer, 8);
+	ret = os_message_queue_create(buffer, 32);
 	if (ret < 0)
 		return ret;
 

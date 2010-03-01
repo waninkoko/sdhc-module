@@ -6,7 +6,7 @@ ENTRY(_start)
 MEMORY {
 	table		: ORIGIN = 0x0, LENGTH = 0x4000
 	exe(rwx)	: ORIGIN = 0x137e0000, LENGTH = 0x8000
-	ram(rw)		: ORIGIN = 0x137e8000, LENGTH = 0x18000
+	ram(rw)		: ORIGIN = 0x137e8000, LENGTH = 0x10000
 }
 
 __exe_start_phys__		= 0x137e0000;
