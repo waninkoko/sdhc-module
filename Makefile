@@ -21,7 +21,8 @@ LIBS	=
 TARGET	=	sdhc-module
 
 # Objects
-OBJS	=	ipc.o			\
+OBJS	=	es.o			\
+		ipc.o			\
 		main.o			\
 		mem.o			\
 		sdio.o			\

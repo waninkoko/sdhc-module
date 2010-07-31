@@ -22,6 +22,7 @@
 
 #include <string.h>
 
+#include "es.h"
 #include "ipc.h"
 #include "mem.h"
 #include "module.h"
@@ -168,6 +169,19 @@ int main(void)
 
 		switch (message->command) {
 		case IOS_OPEN: {
+			u64 tid;
+
+			/* Get title ID */
+			ret = ES_GetTitleID(&tid);
+
+			/* Check title ID */
+			if (ret >= 0) {
+				write("SDHC: Title identified. Blocking opening request.\n");
+
+				ret = IPC_ENOENT;
+				break;
+			}
+
 			/* Check device path */
 			if (!strcmp(message->open.device, DEVICE_NAME))
 				ret = message->open.resultfd;

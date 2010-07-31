@@ -1,9 +1,9 @@
 /*   
-	Custom IOS Module (SDHC)
+	Custom IOS Module (MLOAD)
 
 	Copyright (C) 2008 neimod.
-	Copyright (C) 2009 WiiGator.
-	Copyright (C) 2009 Waninkoko.
+	Copyright (C) 2010 Hermes.
+	Copyright (C) 2010 Waninkoko.
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -42,8 +42,9 @@ void Timer_Init(void)
 	queuehandle = os_message_queue_create(queuespace, 16);
 
 	/* Create timer */
-	timerId = os_create_timer(1000000, 1, queuehandle, 0x666);
+	timerId = os_create_timer(0, 0, queuehandle, 0x666);
 
+	/* Stop timer */
 	os_stop_timer(timerId);
 }
 
@@ -51,22 +52,17 @@ void Timer_Sleep(u32 time)
 {
 	u32 message;
 
-	/* Send message */
-	os_message_queue_send(queuehandle, 0x555, 0);
-
 	/* Restart timer */
-	os_restart_timer(timerId, time);
+	os_restart_timer(timerId, 0, time);
 
 	while (1) {
+		/* Wait to receive message */
 		os_message_queue_receive(queuehandle, (void *)&message, 0);
 
 		/* Message received */
-		if (message == 0x555)
+		if (message == 0x666)
 			break;
 	}
-
-	
-	os_message_queue_receive(queuehandle, (void *)&message, 0);
 
 	/* Stop timer */
 	os_stop_timer(timerId);

@@ -2,6 +2,7 @@
 #define _TIMER_H_ 
 
 /* Macros */
+#define udelay(t)	Timer_Sleep(t)
 #define usleep(t)	Timer_Sleep(t)
 #define msleep(t)	Timer_Sleep(t*1000)
 
